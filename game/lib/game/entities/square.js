@@ -67,7 +67,29 @@ EntitySquare=ig.Entity.extend({
 				//ig.game.confirmPlay();
 				ig.game.colorTiles(2);
 				ig.game.playingCardStep = 0;
-				ig.game.playCardHere(this.pos.x, this.pos.y, this.myX, this.myY, this.name);
+				if (ig.game.curCardToPlay.classOf == 'unit'){
+					var cName = ig.game.curCardToPlay.name;
+					var cFoodCost = ig.game.curCardToPlay.foodCost1;
+					var cGoldCost = ig.game.curCardToPlay.goldCost1;
+					this.selectedLoc = true;
+					if (ig.game.pData.gold >= cGoldCost && ig.game.pData.food >= cFoodCost){
+						this.currentAnim = this.anims.selectedLoc;	
+						if (confirm(cName + " costs " + cGoldCost + " gold and " + cFoodCost + " food to deploy. Play " + cName + " here?" ) == true) {
+							ig.game.pData.gold -= cGoldCost;
+							ig.game.pData.food -= cFoodCost;
+							ig.game.playCardHere(this.pos.x, this.pos.y, this.myX, this.myY, this.name);
+							this.selectedLoc = false;
+							ig.game.playingCardStep = 0;
+						}
+						else{
+							ig.game.playingCardStep = 0;
+							ig.game.drawPlayingCardDisplay = false;
+						}
+					}
+				}
+				else{
+					ig.game.playCardHere(this.pos.x, this.pos.y, this.myX, this.myY, this.name);
+				}
 			}
 			else if (!this.selected){
 				ig.game.xSelected = this.myX;

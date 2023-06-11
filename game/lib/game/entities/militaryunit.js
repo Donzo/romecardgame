@@ -17,6 +17,10 @@ EntityMilitaryunit=ig.Entity.extend({
 	myX: 0,
 	myY: 0,
 	myTileName: null,
+	muName: null,
+	muID: null,
+	//Array
+	cardData: null,
 	
 	selected: false,
 	
@@ -28,7 +32,7 @@ EntityMilitaryunit=ig.Entity.extend({
 	init: function( x, y, settings ) {
 		this.parent(x, y, settings);	
 		this.addAnim( 'chill', 1, [0], true );
-
+		this.addAnim( 'selectMe', 1, [1], true );
 	},
 	reset: function( x, y, settings ) {
 		this.parent( x, y, settings );
@@ -43,11 +47,32 @@ EntityMilitaryunit=ig.Entity.extend({
 		else{
 			this.ready = true;
 		}
-		
-		this.currentAnim = this.anims.chill;
-		
+		if (ig.game.selectMilitaryUnit){
+			this.currentAnim = this.anims.selectMe;
+		}
+		else{
+			this.currentAnim = this.anims.chill;
+		}	
 		//Click me
 		if (ig.input.released('click') && this.inFocus() && this.ready) {
+			ig.game.flashMUstats(this.muName, this.cardData);
+			
+			if (ig.game.playingCardStep == 1 && ig.game.curCardToPlay.classOf == "character"){
+				var cName = ig.game.curCardToPlay.name;
+				
+				if (confirm("Are you sure you want to attach " + cName + " to this " + this.muName + "?" ) == true) {
+					ig.game.attachCardHere(this.muID);
+					ig.game.selectMilitaryUnit = false;
+				}
+				else{
+					ig.game.playingCardStep = 0;
+					ig.game.drawPlayingCardDisplay = false;
+					ig.game.selectMilitaryUnit = false;
+				}
+			}
+			else{
+				ig.game.openMenuForMU(this.muID);
+			}
 			
 		}
 		

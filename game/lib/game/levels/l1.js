@@ -1,43 +1,8 @@
 ig.module( 'game.levels.l1' )
-.requires( 'impact.image','game.entities.token','game.entities.goal','game.entities.square','game.entities.player' )
+.requires( 'impact.image','game.entities.square' )
 .defines(function(){
 LevelL1=/*JSON[*/{
 	"entities": [
-		{
-			"type": "EntityToken",
-			"x": 556,
-			"y": 2208
-		},
-		{
-			"type": "EntityToken",
-			"x": 640,
-			"y": 2208
-		},
-		{
-			"type": "EntityToken",
-			"x": 696,
-			"y": 2208
-		},
-		{
-			"type": "EntityToken",
-			"x": 480,
-			"y": 2208
-		},
-		{
-			"type": "EntityToken",
-			"x": 424,
-			"y": 2208
-		},
-		{
-			"type": "EntityToken",
-			"x": 360,
-			"y": 2208
-		},
-		{
-			"type": "EntityGoal",
-			"x": 930,
-			"y": 2121
-		},
 		{
 			"type": "EntitySquare",
 			"x": 0,
@@ -1537,11 +1502,6 @@ LevelL1=/*JSON[*/{
 				"myX": 10,
 				"myY": 15
 			}
-		},
-		{
-			"type": "EntityPlayer",
-			"x": 560,
-			"y": 2264
 		}
 	],
 	"layer": [

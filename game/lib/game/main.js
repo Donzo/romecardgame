@@ -71,11 +71,6 @@ MyGame = ig.Game.extend({
 	},
 	
 	//Sounds
-	rightSound: new ig.Sound( 'media/sounds/right.*' ),
-	wrongSound: new ig.Sound( 'media/sounds/wrong.*' ),
-	deadSound: new ig.Sound( 'media/sounds/dead.*' ),
-	victorySound: new ig.Sound('media/sounds/victory-track.*'),
-	youWinSound: new ig.Sound('media/sounds/you-win.*'),
 	drawSwordSound: new ig.Sound('media/sounds/draw-sword.*'),
 	pickSound: new ig.Sound('media/sounds/card-pick.*'),
 	unpickSound: new ig.Sound('media/sounds/card-unpick.*'),
@@ -87,13 +82,15 @@ MyGame = ig.Game.extend({
 	moraleHud3: new ig.Image('media/hud-morale-03.png'),
 	divinityHud: new ig.Image('media/hud-divinity.png'),
 	
+	CCIDCounter: 0,
+	MUIDCounter: 0,
+	
 	enemyRecoveryTime: .66,
 	
 	fadeColor: this.color3,
 	slideColor: this.color3,
 	
 	titleScreen: true,
-	deathScreen: false,
 	transition: false,
 	transitionType: null,
 	flashScreen: false,
@@ -102,9 +99,6 @@ MyGame = ig.Game.extend({
 	flashMsgOffTime: .15,
 	flashMsg: true,
 	
-	//Quizbox
-	quiz: false,
-	questionText: null,
 	
 	//Dfont Variables
 	maxHeaderHeightRatio: 0.15,
@@ -112,44 +106,6 @@ MyGame = ig.Game.extend({
 	maxHeaderLines: 2,
 	maxHeaderLinesPortrait: 3,
 	
-	maxQuestionHeightRatio: 0.55,
-	maxQuestionHeight: null,
-	maxQuestionLines: 4,
-	maxQuestionLinesPortrait: 5,
-	
-	maxCorrectionHeightRatio: 0.15,
-	maxCorrectionHeight: null,
-	maxCorrectionLines: 2,
-	maxCorrectionLinesPortrait: 3,
-	
-	maxTinyQuestionHeightRatio: 0.15,
-	maxTinyQuestionHeight: null,
-	maxTinyQuestionLines: 3,
-	maxTinyQuestionLinesPortrait: 4,
-	
-	
-	maxButtonLineHeight: 1,
-	maxButtonLineHeightPortrait: 1,
-	
-	//Question Board Colors
-	qBoardColor:"#f4fcf7", 
-	qBoardInnerFrameColor: "#fcf4f9",
-	qBoardOuterFrameColor: "#855b5b",
-	rightColor: "#00ff9a",
-	wrongColor: "#ff0065",
-	
-	//Board variables
-	qBoardHeight: .5,
-	answerChoices: 4,
-	answerColumns: 2,
-	
-	ca: null,
-	ac1: null,
-	ac2: null,
-	ac3: null,
-	ac4: null,
-	ac5: null,
-	ac6: null,
 	
 	//Ending Variables
 	flickerColor: false,
@@ -174,9 +130,11 @@ MyGame = ig.Game.extend({
 	prepareDeckMenu: 1,
 	cardSelectionIndex: 0,
 	selectedCardsCount: 0,
+	noMilitaryUnit: true,
 	maxCards: 21,
 	drawPlayCardDisplay: false,
 	playingCardStep: 0,
+	
 	
 	init: function() {
 		//Bind Inputs
@@ -192,6 +150,7 @@ MyGame = ig.Game.extend({
 		this.questionClearTimer = new ig.Timer(0);
 		this.deathScreenTimer = new ig.Timer(0);
 		this.musicDelayTimer = new ig.Timer(0);
+		this.timeLeftInTurn = new ig.Timer(0);
 
 		//Load Title Screen images into impact
 		this.loadTSImages();
@@ -246,7 +205,6 @@ MyGame = ig.Game.extend({
 	update: function() {
 		// Update all entities and backgroundMaps
 		this.parent();
-		
 		//Set Global Pauses
 		if (this.quiz || this.transition || this.titleScreen || this.deathScreen || this.levelCleared || this.endingScreen){
 			ig.game.pause = true;
@@ -296,6 +254,12 @@ MyGame = ig.Game.extend({
 		if (this.screen.y > this.yCamera - margin){
 			this.screen.y -=camSpeed;
 		}
+		if (this.announceCardDraw && this.flashMessageTimer.delta() > 0){
+			this.announceCardDraw = false;
+		}
+		if (this.drawUnitStats && this.flashMessageTimer.delta() > 0 || this.drawUnitStats && ig.game.drawPlayCardDisplay){
+			this.drawUnitStats = false;
+		}
 		//this.screen.x = this.xCamera;
         //this.screen.y = this.yCamera;
 	},
@@ -332,14 +296,16 @@ MyGame = ig.Game.extend({
 		if (this.drawPlayingCardDisplay){		
 			this.drawThePlayingCardDisplay();
 		}
-
-		//Death - Cut - Transition ETC.
+		if (this.announceCardDraw){
+			this.drawCardAnnoucement();
+		}
+		if (this.drawUnitStats){
+			this.drawTheUnitStats();
+		}
+		//Transition ETC.
 		if (this.transition){
 			this.drawTransition();
 		}
-		else if (this.deathScreen){
-			this.drawABox(0, ig.system.width, 0, ig.system.height, 0, this.colorWrong, true, this.colorWrong);
-		}		
 		
 		if (ig.game.userAccountNumber){
 			var ctx = ig.system.context;
@@ -359,7 +325,6 @@ MyGame = ig.Game.extend({
 	LoadLevelBro: function(currentLvlNum){
 		if (currentLvlNum <= this.totalLevels){
 			ig.game.pause = true;
-			ig.game.pData.tokensLT = 0;
 			//Get level string
 			var whichLvl =  parseInt(currentLvlNum);
 			//Turn string into object reference
@@ -371,15 +336,8 @@ MyGame = ig.Game.extend({
 			this.spawnButtons();
 		}
 		else{
-			ig.game.victorySound.stop();
-			if (!ig.game.muteGame){	
-				ig.game.youWinSound.play();
-			}
-			ig.game.pData.timesPassed++;
-			window.localStorage.setItem("timesPassed", ig.game.pData.timesPassed);
 			ig.game.pData.lvl = 1;
 			this.saveGame();
-			ig.game.endingScreen = true;
 			ig.game.muteButtonAlive = false;
 			this.LoadLevelBro(1);	
 			this.readyToLoad = false;
@@ -429,16 +387,13 @@ MyGame = ig.Game.extend({
 		"eCitadelHealth": 100,
 		"eFoodProduction": 100,
 		"eGoldProduction": 100,
-		
+		"turnNumber": 1,
 		"lvl":1,
 
 	},
 
 	playMusicBro: function(which){
-		//Stop any sounds that might be playing when music is called
-		ig.game.deadSound.stop();
-		ig.game.victorySound.stop();
-		
+
 		if(which == 1){
 			ig.game.musicLevel = .25;
 			ig.music.play(01);	
@@ -525,12 +480,12 @@ MyGame = ig.Game.extend({
 			ctx.fillStyle = "#C72C27";
 		}
 		else if (cardsInHand[which].classOf == "character"){
-			/*if (this.militaryUnitPlayed){
+			if (this.militaryUnitPlayed){
 				ctx.fillStyle = "#DAA520";
 			}
 			else{
 				ctx.fillStyle = "#CCCCCC";
-			}*/
+			}
 			ctx.fillStyle = "#FFFFFF";
 		}
 	},
@@ -545,27 +500,80 @@ MyGame = ig.Game.extend({
 				found = true;
 			}
 		}
-		this.militaryUnitPlayed = true;
 	},
-	playCardHere: function(x, y, sX, sY, sqName){
-		//ig.game.spawnEntity( EntityMilitaryunit, x, y, { myX: sX, myY: myY, myTileName: sqName});
-		ig.game.spawnEntity( EntityMilitaryunit, x, y);
+	attachCardHere: function(muID){
+		this.CCIDCounter++;
+		ig.game.curCardToPlay.characterID = this.CCIDCounter;
+		ig.game.curCardToPlay.attachedTo = muID;
+		charactersOnBoard.push(ig.game.curCardToPlay);
+		this.pData.actionPoints--;
+		this.discardCardFromHand();
+		ig.game.playingCardStep = 0;
+	},
+	playCardHere: function(x, y, sX, sY, sqName){		
+		this.militaryUnitPlayed = true;
+		this.MUIDCounter++;
+		ig.game.curCardToPlay.unitID = this.MUIDCounter;
+		unitsOnBoard.push(ig.game.curCardToPlay);
+		ig.game.spawnEntity( EntityMilitaryunit, x, y, {myX: sX, myY: sY, myTileName: sqName, muName:ig.game.curCardToPlay.name, cardData: ig.game.curCardToPlay, muID: ig.game.curCardToPlay.unitID});
+		//ig.game.spawnEntity( EntityMilitaryunit, x, y);
 		ig.game.playingCardStep = 0;
 		ig.game.drawPlayingCardDisplay = false;
 		this.pData.actionPoints--;
 		this.discardCardFromHand();
 	},
+	openMenuForMU(muID){
+		if (!ig.game.playingCardStep){
+			var unit = unitsOnBoard.find(element => element.unitID == muID);
+			console.log('Open menu for ' + unit.name + " but it's not built yet... :()");
+		}
+	},
+	flashMUstats: function(name, data){
+		this.unitDataToDraw = data;
+		this.unitNameToDraw = name;
+		this.drawUnitStats = true;
+		this.flashMessageTimer.set(7);
+	},
+	drawTheUnitStats: function(){
+		var ctx = ig.system.context;
+		this.dFonts.changeFont(ctx, 2);
+		ctx.fillStyle = "#FFFFFF";
+		ctx.fillText(this.unitNameToDraw,  30, 150);
+		this.dFonts.changeFont(ctx, 1);
+		ctx.fillStyle = "#87CEEB";
+		ctx.fillText("Troop Count: " + this.unitDataToDraw.troopCount,  30, 175);
+		ctx.fillText("Attack: " + this.unitDataToDraw.attack,  30, 195);
+		ctx.fillText("Defend: " + this.unitDataToDraw.defend,  30, 215);
+		ctx.fillText("Speed: " + this.unitDataToDraw.speed,  30, 235);
+		ctx.fillText("Movement: " + this.unitDataToDraw.movement,  30, 255);
+		ctx.fillText("Desert: " + this.unitDataToDraw.desert + "%",  30, 275);
+		ctx.fillText("Field: " + this.unitDataToDraw.field + "%",  30, 295);
+		ctx.fillText("Marsh: " + this.unitDataToDraw.marsh + "%",  30, 315);
+		ctx.fillText("Mountain: " + this.unitDataToDraw.mountain + "%",  30, 335);
+		ctx.fillText("Waters: " + this.unitDataToDraw.waters + "%",  30, 355);
+	},
+	drawCardAnnoucement: function(){
+		var ctx = ig.system.context;
+		this.dFonts.changeFont(ctx, 2);
+		ctx.fillStyle = "#C72C27";
+		ctx.fillText("You just drew your " + this.drewCardNamed + " card.",  30, 110);
+	},
 	drawThePlayingCardDisplay: function(){
 		var ctx = ig.system.context;
 		if (ig.game.playingCardStep == 1){
 			this.dFonts.changeFont(ctx, 2);
-			ctx.fillStyle = "#FFFFFF";
+			ctx.fillStyle = "#C72C27";
 			ctx.fillText("Now Playing " + ig.game.curCardToPlay.name, this.cardPickerX + 10, ig.system.height - 75);
-			ctx.fillText("Choose a square to play " + ig.game.curCardToPlay.name, this.cardPickerX + 10, ig.system.height - 50);
+			if (ig.game.curCardToPlay.classOf == "character"){
+				ctx.fillText("Choose a military unit to attach " + ig.game.curCardToPlay.name + ".", this.cardPickerX + 10, ig.system.height - 50);
+			}
+			else{
+				ctx.fillText("Choose a square to play " + ig.game.curCardToPlay.name + ".", this.cardPickerX + 10, ig.system.height - 50);
+			}
 		}
 		else if (ig.game.playingCardStep == 2){
 			this.dFonts.changeFont(ctx, 2);
-			ctx.fillStyle = "#FFFFFF";
+			ctx.fillStyle = "#C72C27";
 			ctx.fillText("Are you sure you want to play " + ig.game.curCardToPlay.name + " here?", this.cardPickerX + 10, this.cardPickerY + 50);
 			//ctx.fillText("Choose a square to play " + ig.game.curCardToPlay.name, this.cardPickerX + 10, this.cardPickerY + 100);
 		}
@@ -609,6 +617,9 @@ MyGame = ig.Game.extend({
 			t6.validLoc = true;
 			t7.validLoc = true;
 			t8.validLoc = true;
+		}
+		else if (ig.game.curCardToPlay.classOf == "character"){
+			ig.game.selectMilitaryUnit = true;
 		}
 		
 	},
@@ -688,11 +699,6 @@ MyGame = ig.Game.extend({
 			ctx.fillText(ig.game.card11, this.cardPickerX + 10, this.cardPickerY + 275);
 		}
 		
-		
-		
-		//this.dFonts.changeFont(ctx, 2);
-		//ctx.fillStyle = this.color1;
-		//ctx.fillText("Play Card", this.playCardButtonX + 5, this.playCardButtonY + this.playCardButtonHeight / 2 + 5);
 	},
 	drawGameDisplay: function(){
 		var ctx = ig.system.context;
@@ -766,8 +772,18 @@ MyGame = ig.Game.extend({
 		myTxt = "ENEMY GOLD PRODUCTION: " + this.pData.eGoldProduction;
 		myTxtWidth = ctx.measureText(myTxt).width;
 		myTxtX = ig.system.width - myTxtWidth;
-		
 		ctx.fillText(myTxt, ig.system.width - myTxtWidth - 10, 350);
+		
+		this.dFonts.changeFont(ctx, 2);
+		ctx.fillStyle = "#C72C27";
+		myTxt = "Turn #" + this.pData.turnNumber;
+		ctx.fillText(myTxt, 150, 50);
+		
+		var tleft = ig.game.timeLeftInTurn.delta() * -1;
+		myTxt = "Time Left: " + tleft.toFixed(2);
+		ctx.fillText(myTxt, 250, 50);
+		
+		
 	},
 	drawPlayCardButton(){
 		var ctx = ig.system.context;
@@ -1154,6 +1170,11 @@ MyGame = ig.Game.extend({
 		
 		
 		
+	},
+	announceDraw: function (cardName){
+		this.flashMessageTimer.set(7);
+		this.drewCardNamed = cardName;
+		this.announceCardDraw = true;
 	},
 	drawReadyForBattleButton: function(){
 		var ctx = ig.system.context;

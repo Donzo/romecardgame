@@ -14,7 +14,6 @@ EntityButton=ig.Entity.extend({
 	type: ig.Entity.TYPE.NONE,
 	checkAgainst: ig.Entity.TYPE.NONE,
 	collides: ig.Entity.COLLIDES.NEVER,
-	
 	clicked: false,
 	
 	_wmDrawBox: true,
@@ -258,16 +257,24 @@ EntityButton=ig.Entity.extend({
 				ig.game.prepareDeckMenu = 2;
 			}
 			else if (this.name == "startBattle" && ig.game.maxSelectedCards > 0){
-				console.log('starting battle...');
-				dealCards();
-				ig.game.fadeIn(0, ig.game.color1);
-				ig.game.prepareDeck = false;
-				ig.game.gameDisplay = true;
-				ig.game.playMusicBro(3);
-				ig.game.spawnEntity( EntityButton, 0, 0, { name: "playCard" });
-				ig.game.spawnEntity( EntityButton, 0, 0, { name: "drawCard" });
+				console.log('1 ig.game.noMilitaryUnit = ' + ig.game.noMilitaryUnit); 
+				for (let i = 0; i < selectedCards.length; i++) {	
+					var cardClass = selectedCards[i].classOf;
+					if (cardClass == "unit"){
+						ig.game.noMilitaryUnit = false;
+					}
+				}
+				console.log('2 ig.game.noMilitaryUnit = ' + ig.game.noMilitaryUnit); 
+				if (ig.game.noMilitaryUnit == true){
+					if (confirm("You have no military units in your deck. Are you sure you want to start the battle?") == true) {
+						this.startTheBattle();
+					}
+				}
+				else{
+					this.startTheBattle();
+				}
 			}
-			else if (this.name == "drawCard" && !ig.game.drawPlayCardDisplay && !ig.game.playingCardStep ){
+			else if (this.name == "drawCard" && !ig.game.drawPlayCardDisplay && !ig.game.playingCardStep && !ig.game.announceCardDraw){
 				drawCard();
 			}
 			else if (this.name == "playCard" && !ig.game.drawPlayCardDisplay && cardsInHand[0] && !ig.game.playingCardStep){
@@ -307,9 +314,13 @@ EntityButton=ig.Entity.extend({
 
 			}
 			else if (this.name == "playCard1" || this.name == "playCard2" || this.name == "playCard3" || this.name == "playCard4" || this.name == "playCard5" || this.name == "playCard6" || this.name == "playCard7" || this.name == "playCard8" || this.name == "playCard9" || this.name == "playCard10" || this.name == "playCard11"){
-				if (!ig.game.playingCardStep){
-					console.log('playing ' + this.card.name);
-					ig.game.curCardToPlay = this.card;
+				console.log('playing ' + this.card.name);
+				ig.game.curCardToPlay = this.card;
+				if (!ig.game.militaryUnitPlayed && ig.game.curCardToPlay.classOf == "character"){
+					alert('You cannot play a character card until you have a military unit in the field. Character cards must be attached to military units.');
+					ig.game.drawPlayCardDisplay = false;
+				}
+				else if (!ig.game.playingCardStep){
 					ig.game.playingCardStep = 1;
 					ig.game.colorTiles();
 					ig.game.drawPlayingCardDisplay = true;
@@ -479,8 +490,45 @@ EntityButton=ig.Entity.extend({
 				}
 				ig.game.loadDeck();
 			}
+			else if (ig.game.prepareDeckMenu == 2 && this.name == "cdLine1" || ig.game.prepareDeckMenu == 2 && this.name == "cdLine2" || ig.game.prepareDeckMenu == 2 && this.name == "cdLine3" || ig.game.prepareDeckMenu == 2 && this.name == "cdLine4" || ig.game.prepareDeckMenu == 2 && this.name == "cdLine5" || ig.game.prepareDeckMenu == 2 && this.name == "cdLine6" || ig.game.prepareDeckMenu == 2 && this.name == "cdLine7" || ig.game.prepareDeckMenu == 2 && this.name == "cdLine8"){
+				if (this.name == "cdLine1"){
+					window.open(selectedCards[ig.game.cdS1].cardIMG, '_blank');
+				}
+				if (this.name == "cdLine2"){
+					window.open(selectedCards[ig.game.cdS2].cardIMG, '_blank');
+				}
+				if (this.name == "cdLine3"){
+					window.open(selectedCards[ig.game.cdS3].cardIMG, '_blank');
+				}
+				if (this.name == "cdLine4"){
+					window.open(selectedCards[ig.game.cdS4].cardIMG, '_blank');
+				}
+				if (this.name == "cdLine5"){
+					window.open(selectedCards[ig.game.cdS5].cardIMG, '_blank');
+				}
+				if (this.name == "cdLine6"){
+					window.open(selectedCards[ig.game.cdS6].cardIMG, '_blank');
+				}
+				if (this.name == "cdLine7"){
+					window.open(selectedCards[ig.game.cdS7].cardIMG, '_blank');
+				}
+				if (this.name == "cdLine8"){
+					window.open(selectedCards[ig.game.cdS8].cardIMG, '_blank');
+				}
+			}
 		}
 		this.parent();
+	},
+	startTheBattle: function(){
+		console.log('starting battle...');
+		dealCards();
+		ig.game.fadeIn(0, ig.game.color1);
+		ig.game.prepareDeck = false;
+		ig.game.gameDisplay = true;
+		ig.game.playMusicBro(3);
+		ig.game.spawnEntity( EntityButton, 0, 0, { name: "playCard" });
+		ig.game.spawnEntity( EntityButton, 0, 0, { name: "drawCard" });
+		ig.game.timeLeftInTurn.set(120);
 	},
 	resetGameData: function(){
 		ig.game.pData.deaths = 0;
